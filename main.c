@@ -49,6 +49,10 @@ main(int argc, char *argv[])
 		}
 	}
 
+	while (wake_threads(cli_options->nb_writers + cli_options->nb_readers)) {
+		;
+	}
+
 	for (int i = 0; i < cli_options->nb_writers; i++) {
 		struct results *results = NULL;
 		if (pthread_join(w_th[i], (void **)&results) < 0) {

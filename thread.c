@@ -12,15 +12,17 @@
 typedef volatile uint64_t (block_t)[8];
 static block_t blocks[8] __attribute__((__aligned__(64)));
 
-struct writers_cond {
+struct threads_cond {
 	pthread_cond_t cond;
 	pthread_mutex_t mutex;
-	int inv_ready;
+	int nb_slept;
+	_Bool awake;
 };
 
-static struct writers_cond writers_cond = {
+static struct threads_cond threads_cond = {
 	.cond = PTHREAD_COND_INITIALIZER,
 	.mutex = PTHREAD_MUTEX_INITIALIZER,
+	.awake = false,
 };
 
 #define prepare_thread(args_)						\
@@ -42,30 +44,31 @@ static struct writers_cond writers_cond = {
 		fprintf(stderr, "error occurred in %s\n", __func__);	\
 	}
 
-static int
-wake_reader(void)
+int
+wake_threads(const int expected_nb_threads)
 {
-	_Bool do_signal;
-	pthread_mutex_lock(&(writers_cond.mutex));
-	writers_cond.inv_ready--;
-	do_signal = (writers_cond.inv_ready <= 0);
-	pthread_mutex_unlock(&(writers_cond.mutex));
+	pthread_mutex_lock(&(threads_cond.mutex));
 
-	if (!writers_cond.inv_ready)
-		pthread_cond_signal(&(writers_cond.cond));
+	_Bool do_signal = (threads_cond.nb_slept == expected_nb_threads);
+	if (do_signal) {
+		threads_cond.awake = true;
+		pthread_cond_broadcast(&(threads_cond.cond));
+	}
 
-	return 0;
+	pthread_mutex_unlock(&(threads_cond.mutex));
+
+	return (int)!do_signal;
 }
 
 static int
-sleep_reader(void)
+sleep_thread(void)
 {
-	pthread_mutex_lock(&(writers_cond.mutex));
-	while (writers_cond.inv_ready) {
-		pthread_cond_wait(&(writers_cond.cond),
-				&(writers_cond.mutex));
-	}
-	pthread_mutex_unlock(&(writers_cond.mutex));
+	pthread_mutex_lock(&(threads_cond.mutex));
+	threads_cond.nb_slept++;
+	while (!threads_cond.awake)
+		pthread_cond_wait(&(threads_cond.cond),
+				&(threads_cond.mutex));
+	pthread_mutex_unlock(&(threads_cond.mutex));
 
 	return 0;
 }
@@ -74,7 +77,7 @@ void *
 writer_blind_write(void *args_)
 {
 	prepare_thread(args_);
-	wake_reader();
+	sleep_thread();
 
 	uint64_t i;
 	unsigned long long t1, t2;
@@ -96,7 +99,7 @@ void *
 writer_read_modify_write(void *args_)
 {
 	prepare_thread(args_);
-	wake_reader();
+	sleep_thread();
 
 	uint64_t i;
 	unsigned long long t1, t2;
@@ -118,7 +121,7 @@ void *
 reader(void *args_)
 {
 	prepare_thread(args_);
-	sleep_reader();
+	sleep_thread();
 
 	int i;
 	uint64_t v;
@@ -140,6 +143,5 @@ reader(void *args_)
 int
 initialize_threads_params(const struct threads_params *params)
 {
-	writers_cond.inv_ready = params->nb_writers;
 	return 0;
 }
