@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <getopt.h>
 #include "cli_options.h"
+#include "thread.h"
 
 #define NB_LOOPS	(2000000)
 #define NB_READERS	(2)
@@ -11,6 +12,7 @@
 #define MEM_BLK_WRITER	(0)
 
 static struct cli_options cli_options = {
+	.writer = writer_blind_write,
 	.nb_loops = NB_LOOPS,
 	.nb_readers = NB_READERS,
 	.nb_writers = NB_WRITERS,
@@ -37,6 +39,7 @@ parse(int argc, char *argv[])
 	struct option options[] = {
 		{"nb_loops", required_argument, NULL, 'l'},
 		{"nb_readers", required_argument, NULL, 'r'},
+		{"write_pattern", required_argument, NULL, 'p'},
 		{"nb_writers", required_argument, NULL, 'w'},
 		{"mb_readers", required_argument, NULL, 'R'},
 		{"mb_writers", required_argument, NULL, 'W'},
@@ -45,7 +48,7 @@ parse(int argc, char *argv[])
 	const struct cli_options *result = NULL;
 
 	for (_Bool is_done = false; is_done != true;) {
-		int c = getopt_long(argc, argv, "r:w:l:R:W:",
+		int c = getopt_long(argc, argv, "r:w:l:R:W:p:",
 				options, NULL);
 		int v;
 
@@ -84,6 +87,20 @@ parse(int argc, char *argv[])
 				goto end;
 
 			cli_options.block_index.writer = v;
+			break;
+		case 'p':
+			sscanf(optarg, "%Lc", &v);
+
+			switch (v) {
+			case 'b':
+				cli_options.writer = writer_blind_write;
+				break;
+			case 'r':
+				cli_options.writer = writer_read_modify_write;
+				break;
+			default:
+				break;
+			}
 			break;
 		case -1:
 		default:

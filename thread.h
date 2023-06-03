@@ -20,5 +20,6 @@ struct results {
 	unsigned long long delta;
 };
 
-void *writer(void *);
+void *writer_blind_write(void *);
+void *writer_read_modify_write(void *);
 void *reader(void *);

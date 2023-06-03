@@ -20,6 +20,7 @@ main(int argc, char *argv[])
 	initialize_threads_params(&params);
 
 	int cpu = 0;
+	void *(*writer)(void *args) = cli_options->writer;
 	for (int i = 0; i < cli_options->nb_writers; i++) {
 		struct args *args = calloc(1, sizeof *args);
 		if (!args)

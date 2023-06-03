@@ -1,6 +1,7 @@
 #pragma once
 
 struct cli_options {
+	void *(*writer)(void *args);
 	int nb_loops;
 	int nb_readers;
 	int nb_writers;

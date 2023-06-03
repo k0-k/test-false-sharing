@@ -71,7 +71,7 @@ sleep_reader(void)
 }
 
 void *
-writer(void *args_)
+writer_blind_write(void *args_)
 {
 	prepare_thread(args_);
 	wake_reader();
@@ -83,6 +83,28 @@ writer(void *args_)
 	_mm_mfence();
 	for (i = 0; i < nb_loops; i++) {
 		blocks[x][y] = i;
+	}
+	_mm_mfence();
+	t2 = __rdtsc();
+
+	results->nb_loops = i;
+	results->delta = t2 - t1;
+	return results;
+}
+
+void *
+writer_read_modify_write(void *args_)
+{
+	prepare_thread(args_);
+	wake_reader();
+
+	uint64_t i;
+	unsigned long long t1, t2;
+
+	t1 = __rdtsc();
+	_mm_mfence();
+	for (i = 0; i < nb_loops; i++) {
+		blocks[x][y]++;
 	}
 	_mm_mfence();
 	t2 = __rdtsc();
