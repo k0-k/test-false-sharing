@@ -77,10 +77,11 @@ void *
 writer_blind_write(void *args_)
 {
 	prepare_thread(args_);
-	sleep_thread();
 
 	uint64_t i;
 	unsigned long long t1, t2;
+
+	sleep_thread();
 
 	t1 = __rdtsc();
 	_mm_mfence();
@@ -99,10 +100,11 @@ void *
 writer_read_modify_write(void *args_)
 {
 	prepare_thread(args_);
-	sleep_thread();
 
 	uint64_t i;
 	unsigned long long t1, t2;
+
+	sleep_thread();
 
 	t1 = __rdtsc();
 	_mm_mfence();
@@ -121,11 +123,12 @@ void *
 reader(void *args_)
 {
 	prepare_thread(args_);
-	sleep_thread();
 
 	int i;
 	uint64_t v;
 	unsigned long long t1, t2;
+
+	sleep_thread();
 
 	t1 = __rdtsc();
 	_mm_mfence();
