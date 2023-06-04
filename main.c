@@ -49,7 +49,7 @@ main(int argc, char *argv[])
 		}
 	}
 
-	while (wake_threads(cli_options->nb_writers + cli_options->nb_readers)) {
+	while (try_wake_threads(cli_options->nb_writers + cli_options->nb_readers)) {
 		;
 	}
 

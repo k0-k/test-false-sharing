@@ -45,7 +45,7 @@ static struct threads_cond threads_cond = {
 	}
 
 int
-wake_threads(const int expected_nb_threads)
+try_wake_threads(const int expected_nb_threads)
 {
 	pthread_mutex_lock(&(threads_cond.mutex));
 
