@@ -24,7 +24,7 @@ main(int argc, char *argv[])
 	initialize_threads_params(&params);
 
 	int cpuid = 0;
-	thread_entrypoint_t writer = cli_options->writer;
+	thread_entrypoint_t writer = cli_options->threads_config.r_w.writers.entrypoint;
 	for (int i = 0; i < nb_writers; i++, cpuid++) {
 		const int block_index = cli_options->threads_config.r_w.writers.block_index;
 		pthread_t *th = create_thread(writer, cpuid, block_index, i, cli_options->nb_loops);
@@ -33,6 +33,7 @@ main(int argc, char *argv[])
 		w_th[i] = th;
 	}
 
+	thread_entrypoint_t reader = cli_options->threads_config.r_w.readers.entrypoint;
 	for (int i = 0; i < nb_readers; i++, cpuid++) {
 		const int block_index = cli_options->threads_config.r_w.readers.block_index;
 		pthread_t *th = create_thread(reader, cpuid, block_index, 7, cli_options->nb_loops);

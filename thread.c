@@ -74,7 +74,7 @@ sleep_thread(void)
 }
 
 void *
-writer_blind_write(void *args_)
+thread_entrypoint_writer_blind_write(void *args_)
 {
 	PREPARE_THREAD(args_);
 
@@ -97,7 +97,7 @@ writer_blind_write(void *args_)
 }
 
 void *
-writer_read_modify_write(void *args_)
+thread_entrypoint_writer_read_modify_write(void *args_)
 {
 	PREPARE_THREAD(args_);
 
@@ -120,7 +120,7 @@ writer_read_modify_write(void *args_)
 }
 
 void *
-reader(void *args_)
+thread_entrypoint_reader(void *args_)
 {
 	PREPARE_THREAD(args_);
 

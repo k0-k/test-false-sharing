@@ -12,17 +12,18 @@
 #define MEM_BLK_WRITER	(0)
 
 static struct cli_options cli_options = {
-	.writer = writer_read_modify_write,
 	.nb_loops = NB_LOOPS,
 	.threads_config = {
 		.r_w = {
 			.readers = {
 				.nb = NB_READERS,
 				.block_index = MEM_BLK_READER,
+				.entrypoint = thread_entrypoint_reader,
 			},
 			.writers = {
 				.nb = NB_WRITERS,
 				.block_index = MEM_BLK_WRITER,
+				.entrypoint = thread_entrypoint_writer_read_modify_write,
 			},
 
 		},
@@ -104,10 +105,10 @@ parse(int argc, char *argv[])
 
 			switch (v) {
 			case 'b':
-				cli_options.writer = writer_blind_write;
+				cli_options.threads_config.r_w.writers.entrypoint = thread_entrypoint_writer_blind_write;
 				break;
 			case 'r':
-				cli_options.writer = writer_read_modify_write;
+				cli_options.threads_config.r_w.writers.entrypoint = thread_entrypoint_writer_read_modify_write;
 				break;
 			default:
 				goto end;

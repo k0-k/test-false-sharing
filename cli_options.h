@@ -2,10 +2,10 @@
 
 struct threads_config {
 	int nb, block_index;
+	void *(*entrypoint)(void *args);
 };
 
 struct cli_options {
-	void *(*writer)(void *args);
 	int nb_loops;
 	union {
 		struct {
