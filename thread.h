@@ -30,3 +30,4 @@ void *reader(void *);
 
 typedef void *(*thread_entrypoint_t)(void *args);
 pthread_t * create_thread(thread_entrypoint_t entrypoint, int cpuid, int x, int y, int nb_loops);
+struct results * join_thread(pthread_t *th);

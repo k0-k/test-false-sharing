@@ -25,7 +25,7 @@ static struct threads_cond threads_cond = {
 	.awake = false,
 };
 
-#define prepare_thread(args_)						\
+#define PREPARE_THREAD(args_)						\
 	struct args *args = args_;					\
 	const int cpuid = args->cpuid;					\
 	const int x = args->index.x, y = args->index.y;			\
@@ -76,7 +76,7 @@ sleep_thread(void)
 void *
 writer_blind_write(void *args_)
 {
-	prepare_thread(args_);
+	PREPARE_THREAD(args_);
 
 	uint64_t i;
 	unsigned long long t1, t2;
@@ -99,7 +99,7 @@ writer_blind_write(void *args_)
 void *
 writer_read_modify_write(void *args_)
 {
-	prepare_thread(args_);
+	PREPARE_THREAD(args_);
 
 	uint64_t i;
 	unsigned long long t1, t2;
@@ -122,7 +122,7 @@ writer_read_modify_write(void *args_)
 void *
 reader(void *args_)
 {
-	prepare_thread(args_);
+	PREPARE_THREAD(args_);
 
 	int i;
 	uint64_t v;
@@ -167,6 +167,17 @@ error:
 	free(th);
 	free(args);
 	return NULL;
+}
+
+struct results *
+join_thread(pthread_t *th)
+{
+	struct results *results = NULL;
+	if (pthread_join(*th, (void **)&results) < 0) {
+		return NULL;
+	}
+	free(th);
+	return results;
 }
 
 int

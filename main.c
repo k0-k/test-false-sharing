@@ -41,8 +41,8 @@ main(int argc, char *argv[])
 	}
 
 	for (int i = 0; i < cli_options->nb_writers; i++) {
-		struct results *results = NULL;
-		if (pthread_join(*w_th[i], (void **)&results) < 0) {
+		struct results *results = join_thread(w_th[i]);
+		if (!results) {
 			return -1;
 		}
 
@@ -52,12 +52,11 @@ main(int argc, char *argv[])
 				(long double) results->delta / results->nb_loops
 		);
 		free(results);
-		free(w_th[i]);
 	}
 
 	for (int i = 0; i < cli_options->nb_readers; i++) {
-		struct results *results = NULL;
-		if (pthread_join(*r_th[i], (void **)&results) < 0) {
+		struct results *results = join_thread(r_th[i]);
+		if (!results) {
 			return -1;
 		}
 
@@ -67,7 +66,6 @@ main(int argc, char *argv[])
 				(long double) results->delta / results->nb_loops
 		);
 		free(results);
-		free(r_th[i]);
 	}
 
 	return 0;
