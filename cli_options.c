@@ -12,13 +12,20 @@
 #define MEM_BLK_WRITER	(0)
 
 static struct cli_options cli_options = {
-	.writer = writer_blind_write,
+	.writer = writer_read_modify_write,
 	.nb_loops = NB_LOOPS,
-	.nb_readers = NB_READERS,
-	.nb_writers = NB_WRITERS,
-	.block_index = {
-		.reader = MEM_BLK_READER,
-		.writer = MEM_BLK_WRITER,
+	.threads_config = {
+		.r_w = {
+			.readers = {
+				.nb = NB_READERS,
+				.block_index = MEM_BLK_READER,
+			},
+			.writers = {
+				.nb = NB_WRITERS,
+				.block_index = MEM_BLK_WRITER,
+			},
+
+		},
 	},
 };
 
@@ -39,10 +46,14 @@ parse(int argc, char *argv[])
 	struct option options[] = {
 		{"nb_loops", required_argument, NULL, 'l'},
 		{"nb_readers", required_argument, NULL, 'r'},
-		{"write_pattern", required_argument, NULL, 'p'},
 		{"nb_writers", required_argument, NULL, 'w'},
+		{"write_pattern", required_argument, NULL, 'p'},
 		{"mb_readers", required_argument, NULL, 'R'},
 		{"mb_writers", required_argument, NULL, 'W'},
+		{"nb_group_a", required_argument, NULL, 'a'},
+		{"nb_group_b", required_argument, NULL, 'b'},
+		{"mb_group_a", required_argument, NULL, 'A'},
+		{"mb_group_b", required_argument, NULL, 'B'},
 		{NULL, 0, NULL, 0},
 	};
 	const struct cli_options *result = NULL;
@@ -65,28 +76,28 @@ parse(int argc, char *argv[])
 			if (v < 0)
 				goto end;
 
-			cli_options.nb_readers = v;
+			cli_options.threads_config.r_w.readers.nb = v;
 			break;
 		case 'w':
 			sscanf(optarg, "%d", &v);
 			if (v < 0)
 				goto end;
 
-			cli_options.nb_writers = v;
+			cli_options.threads_config.r_w.writers.nb = v;
 			break;
 		case 'R':
 			sscanf(optarg, "%d", &v);
 			if (v < 0 || v > 3)
 				goto end;
 
-			cli_options.block_index.reader = v;
+			cli_options.threads_config.r_w.readers.block_index = v;
 			break;
 		case 'W':
 			sscanf(optarg, "%d", &v);
 			if (v < 0 || v > 3)
 				goto end;
 
-			cli_options.block_index.writer = v;
+			cli_options.threads_config.r_w.writers.block_index = v;
 			break;
 		case 'p':
 			sscanf(optarg, "%Lc", &v);
@@ -99,8 +110,22 @@ parse(int argc, char *argv[])
 				cli_options.writer = writer_read_modify_write;
 				break;
 			default:
-				break;
+				goto end;
 			}
+			break;
+		case 'a':
+			sscanf(optarg, "%Lc", &v);
+			switch (v) {
+			case 'r':
+				break;
+			case 'w':
+				break;
+			default:
+				goto end;
+			}
+			break;
+		case 'b':
+			sscanf(optarg, "%Lc", &v);
 			break;
 		case -1:
 		default:
@@ -108,7 +133,9 @@ parse(int argc, char *argv[])
 		}
 	}
 
-	if (nb_cpu >= (cli_options.nb_readers + cli_options.nb_writers))
+	const int nb_readers = cli_options.threads_config.r_w.readers.nb;
+	const int nb_writers = cli_options.threads_config.r_w.writers.nb;
+	if (nb_cpu >= (nb_readers + nb_writers))
 		result = &cli_options;
 
 end:
