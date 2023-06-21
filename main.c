@@ -11,42 +11,29 @@ main(int argc, char *argv[])
 	if (!cli_options)
 		return -1;
 
-	pthread_t r_th[cli_options->nb_readers];
-	pthread_t w_th[cli_options->nb_writers];
+	pthread_t *r_th[cli_options->nb_readers];
+	pthread_t *w_th[cli_options->nb_writers];
+
 	const struct threads_params params = {
 		.nb_readers = cli_options->nb_readers,
 		.nb_writers = cli_options->nb_writers,
 	};
 	initialize_threads_params(&params);
 
-	int cpu = 0;
-	void *(*writer)(void *args) = cli_options->writer;
-	for (int i = 0; i < cli_options->nb_writers; i++) {
-		struct args *args = calloc(1, sizeof *args);
-		if (!args)
+	int cpuid = 0;
+	thread_entrypoint_t writer = cli_options->writer;
+	for (int i = 0; i < cli_options->nb_writers; i++, cpuid++) {
+		pthread_t *th = create_thread(writer, cpuid, cli_options->block_index.writer, i, cli_options->nb_loops);
+		if (!th)
 			return -1;
-
-		args->cpu = cpu++;
-		args->index.x = cli_options->block_index.writer;
-		args->index.y = i;
-		args->nb_loops = cli_options->nb_loops;
-		if (pthread_create(&w_th[i], NULL, writer, args) < 0) {
-			return -1;
-		}
+		w_th[i] = th;
 	}
 
-	for (int i = 0; i < cli_options->nb_readers; i++) {
-		struct args *args = calloc(1, sizeof *args);
-		if (!args)
+	for (int i = 0; i < cli_options->nb_readers; i++, cpuid++) {
+		pthread_t *th = create_thread(reader, cpuid, cli_options->block_index.reader, 7, cli_options->nb_loops);
+		if (!th)
 			return -1;
-
-		args->cpu = cpu++;
-		args->index.x = cli_options->block_index.reader;
-		args->index.y = 7;
-		args->nb_loops = cli_options->nb_loops;
-		if (pthread_create(&r_th[i], NULL, reader, args) < 0) {
-			return -1;
-		}
+		r_th[i] = th;
 	}
 
 	while (try_wake_threads(cli_options->nb_writers + cli_options->nb_readers)) {
@@ -55,7 +42,7 @@ main(int argc, char *argv[])
 
 	for (int i = 0; i < cli_options->nb_writers; i++) {
 		struct results *results = NULL;
-		if (pthread_join(w_th[i], (void **)&results) < 0) {
+		if (pthread_join(*w_th[i], (void **)&results) < 0) {
 			return -1;
 		}
 
@@ -65,11 +52,12 @@ main(int argc, char *argv[])
 				(long double) results->delta / results->nb_loops
 		);
 		free(results);
+		free(w_th[i]);
 	}
 
 	for (int i = 0; i < cli_options->nb_readers; i++) {
 		struct results *results = NULL;
-		if (pthread_join(r_th[i], (void **)&results) < 0) {
+		if (pthread_join(*r_th[i], (void **)&results) < 0) {
 			return -1;
 		}
 
@@ -79,6 +67,7 @@ main(int argc, char *argv[])
 				(long double) results->delta / results->nb_loops
 		);
 		free(results);
+		free(r_th[i]);
 	}
 
 	return 0;

@@ -27,7 +27,7 @@ static struct threads_cond threads_cond = {
 
 #define prepare_thread(args_)						\
 	struct args *args = args_;					\
-	const int cpu = args->cpu;					\
+	const int cpuid = args->cpuid;					\
 	const int x = args->index.x, y = args->index.y;			\
 	const int nb_loops = args->nb_loops;				\
 	free(args_);							\
@@ -39,7 +39,7 @@ static struct threads_cond threads_cond = {
 	pthread_t tid = pthread_self();					\
 	cpu_set_t cpuset;						\
 	CPU_ZERO(&cpuset);						\
-	CPU_SET(cpu, &cpuset);						\
+	CPU_SET(cpuid, &cpuset);					\
 	if (pthread_setaffinity_np(tid, sizeof cpuset, &cpuset)) {	\
 		fprintf(stderr, "error occurred in %s\n", __func__);	\
 	}
@@ -141,6 +141,32 @@ reader(void *args_)
 	results->nb_loops = i;
 	results->delta = t2 - t1;
 	return results;
+}
+
+typedef void *(*entrypoint_t)(void *args);
+
+pthread_t *
+create_thread(thread_entrypoint_t entrypoint, int cpuid, int x, int y, int nb_loops)
+{
+	struct args *args = calloc(1, sizeof *args);
+	pthread_t *th = calloc(1, sizeof *th);
+	if (!args || !th) {
+		goto error;
+	}
+
+	args->cpuid = cpuid;
+	args->index.x = x; 
+	args->index.y = y;
+	args->nb_loops = nb_loops;
+	if (pthread_create(th, NULL, entrypoint, args) < 0) {
+		goto error;
+	}
+
+	return th;
+error:
+	free(th);
+	free(args);
+	return NULL;
 }
 
 int
