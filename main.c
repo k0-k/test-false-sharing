@@ -11,70 +11,59 @@ main(int argc, char *argv[])
 	if (!cli_options)
 		return -1;
 
-	pthread_t r_th[cli_options->nb_readers];
-	pthread_t w_th[cli_options->nb_writers];
-	const struct threads_params params = {
-		.nb_readers = cli_options->nb_readers,
-		.nb_writers = cli_options->nb_writers,
-	};
-	initialize_threads_params(&params);
+	const int nb_threads0 = cli_options->threads_group[0].nb;
+	const int nb_threads1 = cli_options->threads_group[1].nb;
+	pthread_t *group0[nb_threads0];
+	pthread_t *group1[nb_threads1];
+	thread_entrypoint_t entrypoint0 = cli_options->threads_group[0].entrypoint;
+	thread_entrypoint_t entrypoint1 = cli_options->threads_group[1].entrypoint;
 
-	int cpu = 0;
-	void *(*writer)(void *args) = cli_options->writer;
-	for (int i = 0; i < cli_options->nb_writers; i++) {
-		struct args *args = calloc(1, sizeof *args);
-		if (!args)
-			return -1;
+	int cpuid = 0;
 
-		args->cpu = cpu++;
-		args->index.x = cli_options->block_index.writer;
-		args->index.y = i;
-		args->nb_loops = cli_options->nb_loops;
-		if (pthread_create(&w_th[i], NULL, writer, args) < 0) {
+	for (int i = 0; i < nb_threads0; i++, cpuid++) {
+		const int block_index = cli_options->threads_group[0].block_index;
+		pthread_t *th = create_thread(entrypoint0, cpuid, block_index, 7, cli_options->nb_loops);
+		if (!th)
 			return -1;
-		}
+		group0[i] = th;
 	}
 
-	for (int i = 0; i < cli_options->nb_readers; i++) {
-		struct args *args = calloc(1, sizeof *args);
-		if (!args)
+	for (int i = 0; i < nb_threads1; i++, cpuid++) {
+		const int block_index = cli_options->threads_group[1].block_index;
+		pthread_t *th = create_thread(entrypoint1, cpuid, block_index, i, cli_options->nb_loops);
+		if (!th)
 			return -1;
-
-		args->cpu = cpu++;
-		args->index.x = cli_options->block_index.reader;
-		args->index.y = 7;
-		args->nb_loops = cli_options->nb_loops;
-		if (pthread_create(&r_th[i], NULL, reader, args) < 0) {
-			return -1;
-		}
+		group1[i] = th;
 	}
 
-	while (try_wake_threads(cli_options->nb_writers + cli_options->nb_readers)) {
+	while (try_wake_threads(nb_threads0 + nb_threads1)) {
 		;
 	}
 
-	for (int i = 0; i < cli_options->nb_writers; i++) {
-		struct results *results = NULL;
-		if (pthread_join(w_th[i], (void **)&results) < 0) {
+	for (int i = 0; i < nb_threads0; i++) {
+		struct results *results = join_thread(group0[i]);
+		if (!results) {
 			return -1;
 		}
 
-		printf("writer(%p): delta=%llu cycles=%Lf\n",
-				(void *)w_th[i],
+		printf("g0: %s(%p): delta=%llu cycles=%Lf\n",
+				results->thread_kind,
+				(void *)group0[i],
 				results->delta,
 				(long double) results->delta / results->nb_loops
 		);
 		free(results);
 	}
 
-	for (int i = 0; i < cli_options->nb_readers; i++) {
-		struct results *results = NULL;
-		if (pthread_join(r_th[i], (void **)&results) < 0) {
+	for (int i = 0; i < nb_threads1; i++) {
+		struct results *results = join_thread(group1[i]);
+		if (!results) {
 			return -1;
 		}
 
-		printf("reader(%p): delta=%llu cycles=%Lf\n",
-				(void *)r_th[i],
+		printf("g1: %s(%p): delta=%llu cycles=%Lf\n",
+				results->thread_kind,
+				(void *)group1[i],
 				results->delta,
 				(long double) results->delta / results->nb_loops
 		);

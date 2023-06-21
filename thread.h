@@ -1,14 +1,10 @@
 #pragma once
 #define _GNU_SOURCE
 
-struct threads_params {
-	int nb_readers, nb_writers;
-};
-
-int initialize_threads_params(const struct threads_params *);
+#include <pthread.h>
 
 struct args {
-	int cpu;
+	int cpuid;
 	struct {
 		int x, y;
 	} index;
@@ -16,12 +12,17 @@ struct args {
 };
 
 struct results {
+	const char *thread_kind;
 	int nb_loops;
 	unsigned long long delta;
 };
 
 int try_wake_threads(const int expected_nb_threads);
 
-void *writer_blind_write(void *);
-void *writer_read_modify_write(void *);
-void *reader(void *);
+void *thread_entrypoint_writer_blind_write(void *);
+void *thread_entrypoint_writer_read_modify_write(void *);
+void *thread_entrypoint_reader(void *);
+
+typedef void *(*thread_entrypoint_t)(void *args);
+pthread_t * create_thread(thread_entrypoint_t entrypoint, int cpuid, int x, int y, int nb_loops);
+struct results * join_thread(pthread_t *th);

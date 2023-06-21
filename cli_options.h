@@ -1,13 +1,13 @@
 #pragma once
 
+struct threads_config {
+	int nb, block_index;
+	void *(*entrypoint)(void *args);
+};
+
 struct cli_options {
-	void *(*writer)(void *args);
 	int nb_loops;
-	int nb_readers;
-	int nb_writers;
-	struct {
-		int reader, writer;
-	} block_index;
+	struct threads_config threads_group[2];
 };
 
 const struct cli_options *parse(int argc, char *argv[]);

@@ -3,6 +3,7 @@
 #include <inttypes.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <string.h>
 #include <assert.h>
 #include <pthread.h>
 #include <sched.h>
@@ -25,9 +26,9 @@ static struct threads_cond threads_cond = {
 	.awake = false,
 };
 
-#define prepare_thread(args_)						\
+#define PREPARE_THREAD(args_)						\
 	struct args *args = args_;					\
-	const int cpu = args->cpu;					\
+	const int cpuid = args->cpuid;					\
 	const int x = args->index.x, y = args->index.y;			\
 	const int nb_loops = args->nb_loops;				\
 	free(args_);							\
@@ -39,7 +40,7 @@ static struct threads_cond threads_cond = {
 	pthread_t tid = pthread_self();					\
 	cpu_set_t cpuset;						\
 	CPU_ZERO(&cpuset);						\
-	CPU_SET(cpu, &cpuset);						\
+	CPU_SET(cpuid, &cpuset);					\
 	if (pthread_setaffinity_np(tid, sizeof cpuset, &cpuset)) {	\
 		fprintf(stderr, "error occurred in %s\n", __func__);	\
 	}
@@ -73,10 +74,29 @@ sleep_thread(void)
 	return 0;
 }
 
-void *
-writer_blind_write(void *args_)
+static const char *
+get_thread_kind(const char *func_name)
 {
-	prepare_thread(args_);
+	const char *str;
+
+	if (strncmp(func_name, "thread_entrypoint_writer_blind_write", 64) == 0)
+		str = "writer";
+	else if (strncmp(func_name, "thread_entrypoint_writer_read_modify_write", 64) == 0)
+		str = "writer";
+	else if (strncmp(func_name, "thread_entrypoint_reader", 64) == 0)
+		str = "reader";
+	else
+		str = NULL;
+
+	return str;
+}
+
+#define GET_THREAD_KIND() get_thread_kind(__func__)
+
+void *
+thread_entrypoint_writer_blind_write(void *args_)
+{
+	PREPARE_THREAD(args_);
 
 	uint64_t i;
 	unsigned long long t1, t2;
@@ -91,15 +111,16 @@ writer_blind_write(void *args_)
 	_mm_mfence();
 	t2 = __rdtsc();
 
+	results->thread_kind = GET_THREAD_KIND();
 	results->nb_loops = i;
 	results->delta = t2 - t1;
 	return results;
 }
 
 void *
-writer_read_modify_write(void *args_)
+thread_entrypoint_writer_read_modify_write(void *args_)
 {
-	prepare_thread(args_);
+	PREPARE_THREAD(args_);
 
 	uint64_t i;
 	unsigned long long t1, t2;
@@ -114,15 +135,16 @@ writer_read_modify_write(void *args_)
 	_mm_mfence();
 	t2 = __rdtsc();
 
+	results->thread_kind = GET_THREAD_KIND();
 	results->nb_loops = i;
 	results->delta = t2 - t1;
 	return results;
 }
 
 void *
-reader(void *args_)
+thread_entrypoint_reader(void *args_)
 {
-	prepare_thread(args_);
+	PREPARE_THREAD(args_);
 
 	int i;
 	uint64_t v;
@@ -138,13 +160,45 @@ reader(void *args_)
 	_mm_mfence();
 	t2 = __rdtsc();
 
+	results->thread_kind = GET_THREAD_KIND();
 	results->nb_loops = i;
 	results->delta = t2 - t1;
 	return results;
 }
 
-int
-initialize_threads_params(const struct threads_params *params)
+typedef void *(*entrypoint_t)(void *args);
+
+pthread_t *
+create_thread(thread_entrypoint_t entrypoint, int cpuid, int x, int y, int nb_loops)
 {
-	return 0;
+	struct args *args = calloc(1, sizeof *args);
+	pthread_t *th = calloc(1, sizeof *th);
+	if (!args || !th) {
+		goto error;
+	}
+
+	args->cpuid = cpuid;
+	args->index.x = x; 
+	args->index.y = y;
+	args->nb_loops = nb_loops;
+	if (pthread_create(th, NULL, entrypoint, args) < 0) {
+		goto error;
+	}
+
+	return th;
+error:
+	free(th);
+	free(args);
+	return NULL;
+}
+
+struct results *
+join_thread(pthread_t *th)
+{
+	struct results *results = NULL;
+	if (pthread_join(*th, (void **)&results) < 0) {
+		return NULL;
+	}
+	free(th);
+	return results;
 }
