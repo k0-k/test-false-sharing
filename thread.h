@@ -3,12 +3,6 @@
 
 #include <pthread.h>
 
-struct threads_params {
-	int nb_readers, nb_writers;
-};
-
-int initialize_threads_params(const struct threads_params *);
-
 struct args {
 	int cpuid;
 	struct {
@@ -18,6 +12,7 @@ struct args {
 };
 
 struct results {
+	const char *thread_kind;
 	int nb_loops;
 	unsigned long long delta;
 };

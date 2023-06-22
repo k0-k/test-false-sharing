@@ -3,6 +3,7 @@
 #include <inttypes.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <string.h>
 #include <assert.h>
 #include <pthread.h>
 #include <sched.h>
@@ -73,6 +74,25 @@ sleep_thread(void)
 	return 0;
 }
 
+static const char *
+get_thread_kind(const char *func_name)
+{
+	const char *str;
+
+	if (strncmp(func_name, "thread_entrypoint_writer_blind_write", 64) == 0)
+		str = "writer";
+	else if (strncmp(func_name, "thread_entrypoint_writer_read_modify_write", 64) == 0)
+		str = "writer";
+	else if (strncmp(func_name, "thread_entrypoint_reader", 64) == 0)
+		str = "reader";
+	else
+		str = NULL;
+
+	return str;
+}
+
+#define GET_THREAD_KIND() get_thread_kind(__func__)
+
 void *
 thread_entrypoint_writer_blind_write(void *args_)
 {
@@ -91,6 +111,7 @@ thread_entrypoint_writer_blind_write(void *args_)
 	_mm_mfence();
 	t2 = __rdtsc();
 
+	results->thread_kind = GET_THREAD_KIND();
 	results->nb_loops = i;
 	results->delta = t2 - t1;
 	return results;
@@ -114,6 +135,7 @@ thread_entrypoint_writer_read_modify_write(void *args_)
 	_mm_mfence();
 	t2 = __rdtsc();
 
+	results->thread_kind = GET_THREAD_KIND();
 	results->nb_loops = i;
 	results->delta = t2 - t1;
 	return results;
@@ -138,6 +160,7 @@ thread_entrypoint_reader(void *args_)
 	_mm_mfence();
 	t2 = __rdtsc();
 
+	results->thread_kind = GET_THREAD_KIND();
 	results->nb_loops = i;
 	results->delta = t2 - t1;
 	return results;
@@ -178,10 +201,4 @@ join_thread(pthread_t *th)
 	}
 	free(th);
 	return results;
-}
-
-int
-initialize_threads_params(const struct threads_params *params)
-{
-	return 0;
 }

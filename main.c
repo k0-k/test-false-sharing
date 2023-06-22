@@ -17,12 +17,6 @@ main(int argc, char *argv[])
 	pthread_t *r_th[nb_readers];
 	pthread_t *w_th[nb_writers];
 
-	const struct threads_params params = {
-		.nb_readers = nb_readers,
-		.nb_writers = nb_writers,
-	};
-	initialize_threads_params(&params);
-
 	int cpuid = 0;
 	thread_entrypoint_t writer = cli_options->threads_config.r_w.writers.entrypoint;
 	for (int i = 0; i < nb_writers; i++, cpuid++) {
@@ -52,7 +46,8 @@ main(int argc, char *argv[])
 			return -1;
 		}
 
-		printf("writer(%p): delta=%llu cycles=%Lf\n",
+		printf("%s(%p): delta=%llu cycles=%Lf\n",
+				results->thread_kind,
 				(void *)w_th[i],
 				results->delta,
 				(long double) results->delta / results->nb_loops
@@ -66,7 +61,8 @@ main(int argc, char *argv[])
 			return -1;
 		}
 
-		printf("reader(%p): delta=%llu cycles=%Lf\n",
+		printf("%s(%p): delta=%llu cycles=%Lf\n",
+				results->thread_kind,
 				(void *)r_th[i],
 				results->delta,
 				(long double) results->delta / results->nb_loops

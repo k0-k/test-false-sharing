@@ -55,12 +55,14 @@ parse(int argc, char *argv[])
 		{"nb_group_b", required_argument, NULL, 'b'},
 		{"mb_group_a", required_argument, NULL, 'A'},
 		{"mb_group_b", required_argument, NULL, 'B'},
+		{"rw_group_a", required_argument, NULL, '0'},
+		{"rw_group_b", required_argument, NULL, '1'},
 		{NULL, 0, NULL, 0},
 	};
 	const struct cli_options *result = NULL;
 
 	for (_Bool is_done = false; is_done != true;) {
-		int c = getopt_long(argc, argv, "r:w:l:R:W:p:",
+		int c = getopt_long(argc, argv, "r:w:l:R:W:p:a:b:A:B:",
 				options, NULL);
 		int v;
 
@@ -115,18 +117,64 @@ parse(int argc, char *argv[])
 			}
 			break;
 		case 'a':
+			sscanf(optarg, "%d", &v);
+			if (v < 0)
+				goto end;
+
+			cli_options.threads_config.group[0].nb = v;
+			break;
+		case 'b':
+			sscanf(optarg, "%d", &v);
+			if (v < 0)
+				goto end;
+
+			cli_options.threads_config.group[1].nb = v;
+			break;
+		case 'A':
+			sscanf(optarg, "%d", &v);
+			if (v < 0 || v > 3)
+				goto end;
+
+			cli_options.threads_config.group[0].block_index = v;
+			break;
+		case 'B':
+			sscanf(optarg, "%d", &v);
+			if (v < 0 || v > 3)
+				goto end;
+
+			cli_options.threads_config.group[1].block_index = v;
+			break;
+		case '0':
 			sscanf(optarg, "%Lc", &v);
 			switch (v) {
 			case 'r':
+				cli_options.threads_config.group[0].entrypoint = thread_entrypoint_reader;
 				break;
 			case 'w':
+				cli_options.threads_config.group[0].entrypoint = thread_entrypoint_writer_read_modify_write;
+				break;
+			case 'b':
+				cli_options.threads_config.group[0].entrypoint = thread_entrypoint_writer_blind_write;
 				break;
 			default:
 				goto end;
 			}
 			break;
-		case 'b':
+		case '1':
 			sscanf(optarg, "%Lc", &v);
+			switch (v) {
+			case 'r':
+				cli_options.threads_config.group[1].entrypoint = thread_entrypoint_reader;
+				break;
+			case 'w':
+				cli_options.threads_config.group[1].entrypoint = thread_entrypoint_writer_read_modify_write;
+				break;
+			case 'b':
+				cli_options.threads_config.group[1].entrypoint = thread_entrypoint_writer_blind_write;
+				break;
+			default:
+				goto end;
+			}
 			break;
 		case -1:
 		default:

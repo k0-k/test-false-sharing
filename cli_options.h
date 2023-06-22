@@ -11,9 +11,7 @@ struct cli_options {
 		struct {
 			struct threads_config readers, writers;
 		} r_w;
-		struct {
-			struct threads_config group[2];
-		} group;
+		struct threads_config group[2];
 	} threads_config;
 };
 
