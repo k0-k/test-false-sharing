@@ -46,7 +46,7 @@ main(int argc, char *argv[])
 			return -1;
 		}
 
-		printf("%s(%p): delta=%llu cycles=%Lf\n",
+		printf("g0: %s(%p): delta=%llu cycles=%Lf\n",
 				results->thread_kind,
 				(void *)group0[i],
 				results->delta,
@@ -61,7 +61,7 @@ main(int argc, char *argv[])
 			return -1;
 		}
 
-		printf("%s(%p): delta=%llu cycles=%Lf\n",
+		printf("g1: %s(%p): delta=%llu cycles=%Lf\n",
 				results->thread_kind,
 				(void *)group1[i],
 				results->delta,

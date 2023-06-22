@@ -62,7 +62,7 @@ parse(int argc, char *argv[])
 	const struct cli_options *result = NULL;
 
 	for (_Bool is_done = false; is_done != true;) {
-		int c = getopt_long(argc, argv, "r:w:l:R:W:p:a:b:A:B:",
+		int c = getopt_long(argc, argv, "r:w:l:R:W:p:a:b:A:B:0:1:",
 				options, NULL);
 		int v;
 
