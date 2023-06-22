@@ -11,22 +11,22 @@
 #define MEM_BLK_READER	(0)
 #define MEM_BLK_WRITER	(0)
 
+enum {
+	IDX_READER,
+	IDX_WRITER,
+};
+
 static struct cli_options cli_options = {
 	.nb_loops = NB_LOOPS,
-	.threads_config = {
-		.r_w = {
-			.readers = {
-				.nb = NB_READERS,
-				.block_index = MEM_BLK_READER,
-				.entrypoint = thread_entrypoint_reader,
-			},
-			.writers = {
-				.nb = NB_WRITERS,
-				.block_index = MEM_BLK_WRITER,
-				.entrypoint = thread_entrypoint_writer_read_modify_write,
-			},
-
-		},
+	.threads_group[IDX_READER] = {
+		.nb = NB_READERS,
+		.block_index = MEM_BLK_READER,
+		.entrypoint = thread_entrypoint_reader,
+	},
+	.threads_group[IDX_WRITER] = {
+		.nb = NB_WRITERS,
+		.block_index = MEM_BLK_WRITER,
+		.entrypoint = thread_entrypoint_writer_read_modify_write,
 	},
 };
 
@@ -79,38 +79,38 @@ parse(int argc, char *argv[])
 			if (v < 0)
 				goto end;
 
-			cli_options.threads_config.r_w.readers.nb = v;
+			cli_options.threads_group[IDX_READER].nb = v;
 			break;
 		case 'w':
 			sscanf(optarg, "%d", &v);
 			if (v < 0)
 				goto end;
 
-			cli_options.threads_config.r_w.writers.nb = v;
+			cli_options.threads_group[IDX_WRITER].nb = v;
 			break;
 		case 'R':
 			sscanf(optarg, "%d", &v);
 			if (v < 0 || v > 3)
 				goto end;
 
-			cli_options.threads_config.r_w.readers.block_index = v;
+			cli_options.threads_group[IDX_READER].block_index = v;
 			break;
 		case 'W':
 			sscanf(optarg, "%d", &v);
 			if (v < 0 || v > 3)
 				goto end;
 
-			cli_options.threads_config.r_w.writers.block_index = v;
+			cli_options.threads_group[IDX_WRITER].block_index = v;
 			break;
 		case 'p':
 			sscanf(optarg, "%Lc", &v);
 
 			switch (v) {
 			case 'b':
-				cli_options.threads_config.r_w.writers.entrypoint = thread_entrypoint_writer_blind_write;
+				cli_options.threads_group[IDX_WRITER].entrypoint = thread_entrypoint_writer_blind_write;
 				break;
 			case 'r':
-				cli_options.threads_config.r_w.writers.entrypoint = thread_entrypoint_writer_read_modify_write;
+				cli_options.threads_group[IDX_WRITER].entrypoint = thread_entrypoint_writer_read_modify_write;
 				break;
 			default:
 				goto end;
@@ -121,40 +121,40 @@ parse(int argc, char *argv[])
 			if (v < 0)
 				goto end;
 
-			cli_options.threads_config.group[0].nb = v;
+			cli_options.threads_group[0].nb = v;
 			break;
 		case 'b':
 			sscanf(optarg, "%d", &v);
 			if (v < 0)
 				goto end;
 
-			cli_options.threads_config.group[1].nb = v;
+			cli_options.threads_group[1].nb = v;
 			break;
 		case 'A':
 			sscanf(optarg, "%d", &v);
 			if (v < 0 || v > 3)
 				goto end;
 
-			cli_options.threads_config.group[0].block_index = v;
+			cli_options.threads_group[0].block_index = v;
 			break;
 		case 'B':
 			sscanf(optarg, "%d", &v);
 			if (v < 0 || v > 3)
 				goto end;
 
-			cli_options.threads_config.group[1].block_index = v;
+			cli_options.threads_group[1].block_index = v;
 			break;
 		case '0':
 			sscanf(optarg, "%Lc", &v);
 			switch (v) {
 			case 'r':
-				cli_options.threads_config.group[0].entrypoint = thread_entrypoint_reader;
+				cli_options.threads_group[0].entrypoint = thread_entrypoint_reader;
 				break;
 			case 'w':
-				cli_options.threads_config.group[0].entrypoint = thread_entrypoint_writer_read_modify_write;
+				cli_options.threads_group[0].entrypoint = thread_entrypoint_writer_read_modify_write;
 				break;
 			case 'b':
-				cli_options.threads_config.group[0].entrypoint = thread_entrypoint_writer_blind_write;
+				cli_options.threads_group[0].entrypoint = thread_entrypoint_writer_blind_write;
 				break;
 			default:
 				goto end;
@@ -164,13 +164,13 @@ parse(int argc, char *argv[])
 			sscanf(optarg, "%Lc", &v);
 			switch (v) {
 			case 'r':
-				cli_options.threads_config.group[1].entrypoint = thread_entrypoint_reader;
+				cli_options.threads_group[1].entrypoint = thread_entrypoint_reader;
 				break;
 			case 'w':
-				cli_options.threads_config.group[1].entrypoint = thread_entrypoint_writer_read_modify_write;
+				cli_options.threads_group[1].entrypoint = thread_entrypoint_writer_read_modify_write;
 				break;
 			case 'b':
-				cli_options.threads_config.group[1].entrypoint = thread_entrypoint_writer_blind_write;
+				cli_options.threads_group[1].entrypoint = thread_entrypoint_writer_blind_write;
 				break;
 			default:
 				goto end;
@@ -182,9 +182,9 @@ parse(int argc, char *argv[])
 		}
 	}
 
-	const int nb_readers = cli_options.threads_config.r_w.readers.nb;
-	const int nb_writers = cli_options.threads_config.r_w.writers.nb;
-	if (nb_cpu >= (nb_readers + nb_writers))
+	const int nb_threads0 = cli_options.threads_group[0].nb;
+	const int nb_threads1 = cli_options.threads_group[1].nb;
+	if (nb_cpu >= (nb_threads0 + nb_threads1))
 		result = &cli_options;
 
 end:
